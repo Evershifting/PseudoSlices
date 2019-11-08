@@ -6,5 +6,7 @@ public enum EventsType
 {
     SlicePutInCircle,
     CircleIsFull,
-    CircleDestroyed
+    CircleDestroyed,
+    CircleSpawned,
+    SliceFinishedMovement
 }

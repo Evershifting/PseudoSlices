@@ -22,29 +22,37 @@ internal class GameManager : MonoBehaviour
     private List<GameObject> _circleSpawnPositions = new List<GameObject>();
 
     [Header("Generation weights")]
-    [SerializeField, Range(1, 100)]
+    [SerializeField, Range(0, 100)]
     private List<float> weigths;
     #endregion
 
-    private List<Circle> _circles = new List<Circle>();
+    private List<ICircle> _circles = new List<ICircle>();
 
 
     private void OnEnable()
     {
-        EventsManager.AddListener<bool>(EventsType.SlicePutInCircle, OnSlicePutInCircle);
-        EventsManager.AddListener<Circle>(EventsType.CircleIsFull, OnCircleIsFull);
+        EventsManager.AddListener<ICircle>(EventsType.CircleSpawned, OnCircleSpawned);
+        EventsManager.AddListener<bool, ICircle>(EventsType.SlicePutInCircle, OnSlicePutInCircle);
+        EventsManager.AddListener<ICircle>(EventsType.CircleIsFull, OnCircleIsFull);
     }
+
     private void OnApplicationQuit()
     {
         OnDisable();
     }
     private void OnDisable()
     {
-        EventsManager.RemoveListener<bool>(EventsType.SlicePutInCircle, OnSlicePutInCircle);
-        EventsManager.RemoveListener<Circle>(EventsType.CircleIsFull, OnCircleIsFull);
+        EventsManager.RemoveListener<ICircle>(EventsType.CircleSpawned, OnCircleSpawned);
+        EventsManager.RemoveListener<bool, ICircle>(EventsType.SlicePutInCircle, OnSlicePutInCircle);
+        EventsManager.RemoveListener<ICircle>(EventsType.CircleIsFull, OnCircleIsFull);
     }
 
     private void Awake()
+    {
+        CheckGenerationWeights();
+    }
+
+    private void CheckGenerationWeights()
     {
         if (weigths == null || weigths.Count == 0)
         {
@@ -55,21 +63,24 @@ internal class GameManager : MonoBehaviour
         if (weigths.All(w => w == 0))
             weigths[0] = 1;
     }
-
     private void Start()
     {
         GenerateCircles();
-        GenerateSlice();
     }
 
     private void GenerateCircles()
     {
+        _circles.Clear();
         foreach (GameObject parent in _circleSpawnPositions)
         {
+            foreach (Transform child in parent.transform)
+            {
+                Destroy(child.gameObject);
+            }
             Instantiate(_circlePrefab, parent.transform);
         }
+        GenerateSlice();
     }
-
     private void GenerateSlice()
     {
         CurrentSlice.Clear();
@@ -107,55 +118,53 @@ internal class GameManager : MonoBehaviour
             CurrentSlice.Add(newSlice);
         }
         if (IsGameOver())
-            Debug.Log("GameOver");
+            GenerateCircles();
     }
-
     private bool IsGameOver()
     {
-        foreach (Circle circle in _circles)
+        foreach (ICircle ICircle in _circles)
         {
-            if (circle.IsSliceFitting(CurrentSlice))
+            if (ICircle.IsSliceFitting(CurrentSlice))
                 return false;
         }
         return true;
     }
+    private List<ICircle> GetNeighbourCircles(ICircle Circle)
+    {
+        int index = _circles.IndexOf(Circle);
+        int prevIndex = index - 1 >= 0 ? index - 1 : _circles.Count - 1;
+        int nextIndex = index + 1 <= _circles.Count - 1 ? index + 1 : 0;
+
+        return new List<ICircle>() { _circles[prevIndex], _circles[index], _circles[nextIndex] };
+    }
 
 
-    private void OnSlicePutInCircle(bool value)
+
+    private void OnSlicePutInCircle(bool value, ICircle circle)
     {
         if (value)
             GenerateSlice();
+        else
+        {
+            circle.ShowErrorAnimation();
+        }
     }
-    private void OnCircleIsFull(Circle circle)
+    private void OnCircleIsFull(ICircle Circle)
     {
-        List<Circle> circlesToDestroy = GetNeighbourCircles(circle);
+        List<ICircle> circlesToDestroy = GetNeighbourCircles(Circle);
 
-        foreach (Circle circleToDestroy in circlesToDestroy)
+        foreach (ICircle circleToDestroy in circlesToDestroy)
         {
             circleToDestroy.DestroySlices();
         }
     }
-    private List<Circle> GetNeighbourCircles(Circle circle)
+    private void OnCircleSpawned(ICircle Circle)
     {
-        int index = _circles.IndexOf(circle);
-        int prevIndex = index - 1 >= 0 ? index - 1 : _circles.Count - 1;
-        int nextIndex = index + 1 <= _circles.Count - 1 ? index + 1 : 0;
-
-        return new List<Circle>() { _circles[prevIndex], _circles[index], _circles[nextIndex] };
-    }
-
-    internal void AddCircle(Circle circle)
-    {
-        if (!_circles.Contains(circle))
-            _circles.Add(circle);
+        if (!_circles.Contains(Circle))
+            _circles.Add(Circle);
         else
         {
-            Debug.Log($"Duplicated circle: {circle.name}");
+            Debug.LogError($"Duplicated Circle!");
         }
-    }
-
-    public void ZuZu()
-    {
-        PlayerPrefs.SetInt("Score", 0);
     }
 }

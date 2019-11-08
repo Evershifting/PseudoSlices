@@ -5,15 +5,27 @@ using System.Linq;
 using UnityEngine;
 
 
-public class Circle : MonoBehaviour
+public class Circle : MonoBehaviour, ICircle
 {
     [SerializeField]
     private float _scoreValue = 25f;
     private int[] _slices = new int[6];
 
+    private void OnEnable()
+    {
+        EventsManager.AddListener(EventsType.SliceFinishedMovement, CheckForFullCircle);
+    }
+    private void OnApplicationQuit()
+    {
+        OnDisable();
+    }
+    private void OnDisable()
+    {
+        EventsManager.RemoveListener(EventsType.SliceFinishedMovement, CheckForFullCircle);
+    }
     private void Awake()
     {
-        FindObjectOfType<GameManager>().AddCircle(this);
+        EventsManager.Broadcast(EventsType.CircleSpawned, this);
     }
 
     public bool IsSliceFitting(List<Slice> bigSlice)
@@ -54,16 +66,12 @@ public class Circle : MonoBehaviour
             foreach (Slice slice in GameManager.CurrentSlice)
             {
                 _slices[(int)slice.Position] = 1;
-                slice.transform.SetParent(transform);
-                slice.transform.localPosition = Vector3.zero;
-                slice.transform.localScale = Vector3.one;
+                slice.MoveSlice(transform);
             }
-            CheckForFullCircle();
-            EventsManager.Broadcast(EventsType.SlicePutInCircle, true);
         }
         else
         {
-            EventsManager.Broadcast(EventsType.SlicePutInCircle, false);
+            EventsManager.Broadcast(EventsType.SlicePutInCircle, false, this);
         }
     }
 
@@ -73,5 +81,11 @@ public class Circle : MonoBehaviour
         {
             EventsManager.Broadcast(EventsType.CircleIsFull, this);
         }
+        EventsManager.Broadcast(EventsType.SlicePutInCircle, true, this);
+    }
+
+    public void ShowErrorAnimation()
+    {
+        Debug.Log("Error Animation");
     }
 }
