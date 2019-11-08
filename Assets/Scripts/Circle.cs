@@ -1,37 +1,102 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
-public class Circle : MonoBehaviour
-{
-    private int[] _slices = new int[6];
 
+public class Circle : MonoBehaviour, ICircle
+{
+    [SerializeField]
+    private float _scoreValue = 25f;
+    private List<ISlice> _slices = new List<ISlice>();
+
+    private void OnEnable()
+    {
+        EventsManager.AddListener(EventsType.SliceFinishedMovement, CheckForFullCircle);
+    }
+    private void OnApplicationQuit()
+    {
+        OnDisable();
+    }
+    private void OnDisable()
+    {
+        EventsManager.RemoveListener(EventsType.SliceFinishedMovement, CheckForFullCircle);
+    }
     private void Awake()
     {
-        FindObjectOfType<GameManager>().AddCircle(this);
+        EventsManager.Broadcast(EventsType.CircleSpawned, this);
     }
-    public bool IsSliceFitting(List<Slice> bigSlice)
+
+    public bool IsSliceFitting(List<ISlice> bigSlice)
     {
-        foreach (Slice slice in bigSlice)
-        {
-            if (slice.Position >= 0 && (int)slice.Position < _slices.Length)
+        if (_slices.Count > 0)
+            foreach (ISlice slice in bigSlice)
             {
-                if (_slices[(int)slice.Position] != 0)
+                if (_slices.Any(sl => sl.Position == slice.Position))
                 {
                     return false;
                 }
             }
-            else
-            {
-                Debug.Log("Wrong position value");
-                return false;
-            }
-        }
         return true;
     }
 
+    public void ClearSlices()
+    {
+        foreach (Transform child in transform)
+        {
+            Destroy(child.gameObject);
+        }
+        _slices.Clear();
+    }
+    public void DestroySlices()
+    {
+        if (_slices.Count > 0)
+        {
+            foreach (ISlice child in _slices)
+            {
+                child.DestroySlice();
+            }
+            EventsManager.Broadcast(EventsType.CircleDestroyed, _scoreValue);
+            _slices.Clear();
+        }
+    }
+
+    //called from a button on this prefab
     public void PutSliceInCircle()
     {
+        if (IsSliceFitting(GameManager.CurrentSlice))
+        {
+            foreach (ISlice slice in GameManager.CurrentSlice)
+            {
+                _slices.Add(slice);
+                slice.MoveSlice(transform);
+            }
+        }
+        else
+        {
+            EventsManager.Broadcast(EventsType.SlicePutInCircle, false, this);
+        }
+    }
 
+    private void CheckForFullCircle()
+    {
+        if (_slices.Count >= 6)
+        {
+            EventsManager.Broadcast(EventsType.CircleIsFull, this);
+        }
+        EventsManager.Broadcast(EventsType.SlicePutInCircle, true, this);
+    }
+
+    public void ShowErrorAnimation()
+    {
+        foreach (ISlice slice in _slices)
+        {
+            slice.ErrorAnimation();
+        }
+        foreach (ISlice slice in GameManager.CurrentSlice)
+        {
+            slice.ErrorAnimation();
+        }
     }
 }
