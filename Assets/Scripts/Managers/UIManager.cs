@@ -7,6 +7,7 @@ using UnityEngine.UI;
 public class UIManager : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI _resourceUICounter;
+    [SerializeField] private GameObject _gameOverScreen;
 
     public delegate void OnScore(int value);
     public static event OnScore OnScoreEvent;
@@ -14,6 +15,8 @@ public class UIManager : MonoBehaviour
     private void OnEnable()
     {
         EventsManager.AddListener<float>(EventsType.CircleDestroyed, UpdateScore);
+        EventsManager.AddListener(EventsType.GameOver, GameOver);
+        EventsManager.AddListener(EventsType.RestartGame, Restart);
     }
     private void OnApplicationQuit()
     {
@@ -23,6 +26,7 @@ public class UIManager : MonoBehaviour
     {
         PlayerPrefs.SetInt("Score", int.Parse(_resourceUICounter.text));
         EventsManager.RemoveListener<float>(EventsType.CircleDestroyed, UpdateScore);
+        EventsManager.RemoveListener(EventsType.RestartGame, Restart);
     }
 
     private void Start()
@@ -33,7 +37,14 @@ public class UIManager : MonoBehaviour
         UpdateScore(PlayerPrefs.GetInt("Score"));
     }
 
-
+    private void GameOver()
+    {
+        _gameOverScreen.SetActive(true);
+    }
+    private void Restart()
+    {
+        _gameOverScreen.SetActive(false);
+    }
     private void UpdateScore(float value)
     {
         if (_resourceUICounter)

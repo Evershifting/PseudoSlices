@@ -9,7 +9,7 @@ public class Circle : MonoBehaviour, ICircle
 {
     [SerializeField]
     private float _scoreValue = 25f;
-    private int[] _slices = new int[6];
+    private List<ISlice> _slices = new List<ISlice>();
 
     private void OnEnable()
     {
@@ -28,34 +28,38 @@ public class Circle : MonoBehaviour, ICircle
         EventsManager.Broadcast(EventsType.CircleSpawned, this);
     }
 
-    public bool IsSliceFitting(List<Slice> bigSlice)
+    public bool IsSliceFitting(List<ISlice> bigSlice)
     {
-        foreach (Slice slice in bigSlice)
-        {
-            if (slice.Position >= 0 && (int)slice.Position < _slices.Length)
+        if (_slices.Count > 0)
+            foreach (ISlice slice in bigSlice)
             {
-                if (_slices[(int)slice.Position] != 0)
+                if (_slices.Any(sl => sl.Position == slice.Position))
                 {
                     return false;
                 }
             }
-            else
-            {
-                Debug.Log("Wrong position value");
-                return false;
-            }
-        }
         return true;
     }
-    public void DestroySlices()
+
+    public void ClearSlices()
     {
         foreach (Transform child in transform)
         {
             Destroy(child.gameObject);
         }
-        if (_slices.Any(s => s > 0))
+        _slices.Clear();
+    }
+    public void DestroySlices()
+    {
+        if (_slices.Count > 0)
+        {
+            foreach (ISlice child in _slices)
+            {
+                child.DestroySlice();
+            }
             EventsManager.Broadcast(EventsType.CircleDestroyed, _scoreValue);
-        _slices = new int[6];
+            _slices.Clear();
+        }
     }
 
     //called from a button on this prefab
@@ -63,9 +67,9 @@ public class Circle : MonoBehaviour, ICircle
     {
         if (IsSliceFitting(GameManager.CurrentSlice))
         {
-            foreach (Slice slice in GameManager.CurrentSlice)
+            foreach (ISlice slice in GameManager.CurrentSlice)
             {
-                _slices[(int)slice.Position] = 1;
+                _slices.Add(slice);
                 slice.MoveSlice(transform);
             }
         }
@@ -77,7 +81,7 @@ public class Circle : MonoBehaviour, ICircle
 
     private void CheckForFullCircle()
     {
-        if (_slices.All(s => s >= 1))
+        if (_slices.Count >= 6)
         {
             EventsManager.Broadcast(EventsType.CircleIsFull, this);
         }
@@ -86,7 +90,11 @@ public class Circle : MonoBehaviour, ICircle
 
     public void ShowErrorAnimation()
     {
-        foreach (Slice slice in GameManager.CurrentSlice)
+        foreach (ISlice slice in _slices)
+        {
+            slice.ErrorAnimation();
+        }
+        foreach (ISlice slice in GameManager.CurrentSlice)
         {
             slice.ErrorAnimation();
         }

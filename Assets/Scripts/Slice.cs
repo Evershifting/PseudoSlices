@@ -3,7 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Slice : MonoBehaviour
+public class Slice : MonoBehaviour, ISlice
 {
     [SerializeField]
     private float _animationDuration = 0.3f;
@@ -51,13 +51,12 @@ public class Slice : MonoBehaviour
         Image image = GetComponent<Image>();
         Color startingColor = image.color, targetColor = new Color(image.color.r, image.color.g, image.color.b, 0);
         float timer = _animationDuration;
-        //while (timer > 0f)
-        //{
-        //    timer -= Time.deltaTime;
-        //    image.color = Color.Lerp(startingColor, targetColor, timer / _animationDuration);
-        //    yield return null;
-        //}
-        //EventsManager.Broadcast();
+        while (timer > 0f)
+        {
+            timer -= Time.deltaTime;
+            image.color = Color.Lerp(startingColor, targetColor, timer / _animationDuration);
+            yield return null;
+        }
         Destroy(gameObject);
         yield return null;
     }

@@ -3,7 +3,7 @@
 public interface ICircle
 {
     void DestroySlices();
-    bool IsSliceFitting(List<Slice> bigSlice);
+    bool IsSliceFitting(List<ISlice> bigSlice);
     void PutSliceInCircle();
     void ShowErrorAnimation();
 }

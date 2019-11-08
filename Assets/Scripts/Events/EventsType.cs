@@ -8,5 +8,7 @@ public enum EventsType
     CircleIsFull,
     CircleDestroyed,
     CircleSpawned,
-    SliceFinishedMovement
+    SliceFinishedMovement,
+    GameOver,
+    RestartGame
 }

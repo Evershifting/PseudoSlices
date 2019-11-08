@@ -6,12 +6,12 @@ using Random = UnityEngine.Random;
 
 internal class GameManager : MonoBehaviour
 {
-    public static List<Slice> CurrentSlice = new List<Slice>();
+    public static List<ISlice> CurrentSlice = new List<ISlice>();
 
     #region Inspector
     [Header("Prefabs")]
     [SerializeField]
-    private Slice _slicePrefab;
+    private GameObject _slicePrefab;
     [SerializeField]
     private GameObject _circlePrefab;
 
@@ -34,6 +34,7 @@ internal class GameManager : MonoBehaviour
         EventsManager.AddListener<ICircle>(EventsType.CircleSpawned, OnCircleSpawned);
         EventsManager.AddListener<bool, ICircle>(EventsType.SlicePutInCircle, OnSlicePutInCircle);
         EventsManager.AddListener<ICircle>(EventsType.CircleIsFull, OnCircleIsFull);
+        EventsManager.AddListener(EventsType.RestartGame, Restart);
     }
 
     private void OnApplicationQuit()
@@ -45,6 +46,7 @@ internal class GameManager : MonoBehaviour
         EventsManager.RemoveListener<ICircle>(EventsType.CircleSpawned, OnCircleSpawned);
         EventsManager.RemoveListener<bool, ICircle>(EventsType.SlicePutInCircle, OnSlicePutInCircle);
         EventsManager.RemoveListener<ICircle>(EventsType.CircleIsFull, OnCircleIsFull);
+        EventsManager.RemoveListener(EventsType.RestartGame, Restart);
     }
 
     private void Awake()
@@ -113,12 +115,24 @@ internal class GameManager : MonoBehaviour
         int startingPosition = Random.Range(0, 6);
         for (int i = 0; i < amountOfSlicesToSpawn; i++)
         {
-            Slice newSlice = Instantiate(_slicePrefab, _startCircle.transform);
-            newSlice.Init(startingPosition + i > 5 ? (Position)(startingPosition + i - 6) : (Position)(startingPosition + i));
-            CurrentSlice.Add(newSlice);
+            GameObject newSlice = Instantiate(_slicePrefab, _startCircle.transform);
+            ISlice sliceComponent = newSlice.GetComponent<ISlice>();
+            sliceComponent.Init(startingPosition + i > 5 ? (Position)(startingPosition + i - 6) : (Position)(startingPosition + i));
+            CurrentSlice.Add(sliceComponent);
         }
         if (IsGameOver())
-            GenerateCircles();
+        {
+            EventsManager.Broadcast(EventsType.GameOver);
+        }
+    }
+
+    private void Restart()
+    {
+        foreach (Circle circle in _circles)
+        {
+            circle.ClearSlices();
+        }
+        GenerateSlice();
     }
     private bool IsGameOver()
     {
