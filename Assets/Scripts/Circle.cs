@@ -86,6 +86,9 @@ public class Circle : MonoBehaviour, ICircle
 
     public void ShowErrorAnimation()
     {
-        Debug.Log("Error Animation");
+        foreach (Slice slice in GameManager.CurrentSlice)
+        {
+            slice.ErrorAnimation();
+        }
     }
 }
